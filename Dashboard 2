@@ -1,0 +1,615 @@
+<!-- 🌐 WLI Portfolio Dashboard (v7.1 | Portfolio + Performance Charts for Nifty-50) -->
+<div id="wli-dashboard" role="region" aria-labelledby="wli-title">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+#wli-dashboard{
+  --pri:#0059ff;--acc:#00c2ff;--gain:#00c98b;--loss:#ff4d4d;
+  --bg:#f5f8ff;--card:#fff;--txt:#0f172a;--mut:#6b7280;
+  --shadow:0 10px 24px rgba(2,8,23,.06);
+  --blue1:rgba(234,244,255,.85);--blue2:rgba(255,255,255,.55);
+  --vline:rgba(2,8,23,.06);--outer:rgba(2,8,23,.22);
+  font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--txt);padding:10px 8px;
+}
+:focus-visible{outline:2px solid rgba(0,89,255,.6);outline-offset:2px;border-radius:8px}
+
+/* ===== Header + Tabs ===== */
+.header-row{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px}
+.header-title{font-size:1.2rem;font-weight:700;color:var(--pri);margin-bottom:4px}
+.incorporation-info{display:flex;flex-direction:column;align-items:center;font-size:.8rem;color:var(--mut);font-weight:500;line-height:1.3}
+.incorporation-info strong{margin-top:2px;font-size:.9rem;color:var(--txt)}
+
+.nav-tabs{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+
+/* Inactive = blue gradient, active = white pill */
+.nav-tabs [role=tab]{
+  flex:1 1 120px;max-width:160px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--pri),var(--acc));
+  color:#fff;border:1px solid transparent;border-radius:10px;
+  padding:0 10px;font-weight:700;font-size:.75rem;
+  cursor:pointer;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.06);
+  text-transform:uppercase;
+}
+.nav-tabs [role=tab]:hover{transform:translateY(-1px);box-shadow:0 6px 12px rgba(0,89,255,.18)}
+.nav-tabs [role=tab].active{
+  background:#fff;color:var(--pri);
+  border:1px solid rgba(0,89,255,.25);
+  box-shadow:0 4px 10px rgba(0,89,255,.08);
+}
+@media (max-width:480px){
+  .nav-tabs{gap:6px}
+  .nav-tabs [role=tab]{flex:1 1 48%;max-width:none;height:34px;font-size:.7rem;padding:0 8px}
+}
+
+/* ===== Cards ===== */
+.data-panel{padding:8px 0;margin-bottom:8px}
+.card-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:stretch}
+@media (max-width:1100px){.card-grid{grid-template-columns:repeat(5,1fr)}}
+@media (max-width:900px){.card-grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:700px){.card-grid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:480px){.card-grid{grid-template-columns:repeat(2,1fr);gap:10px}}
+
+.card{
+  position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:14px 12px;border-radius:16px;
+  background:linear-gradient(180deg,var(--blue1),var(--blue2)),
+    radial-gradient(120% 60% at 50% 0,rgba(0,89,255,.06),rgba(0,194,255,.04) 45%,transparent 75%);
+  backdrop-filter:blur(10px) saturate(140%);
+  -webkit-backdrop-filter:blur(10px) saturate(140%);
+  border:1px solid rgba(255,255,255,.85);box-shadow:var(--shadow);overflow:hidden;
+}
+.card::before{
+  content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;
+  background:linear-gradient(135deg,rgba(0,89,255,.18),rgba(0,194,255,.18));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+.card::after{
+  content:"";position:absolute;top:-120%;left:-40%;width:60%;height:300%;
+  background:linear-gradient(60deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:rotate(12deg);animation:shine 7s linear infinite;
+}
+@keyframes shine{
+  0%{transform:translateX(-120%) rotate(12deg)}
+  60%,100%{transform:translateX(160%) rotate(12deg)}
+}
+.card-head{font-size:.78rem;color:var(--mut);font-weight:700;text-align:center}
+.card-divider{width:58%;height:1px;background:rgba(0,0,0,.08);margin:8px 0}
+.card-value{font-size:1.12rem;font-weight:800;line-height:1.2;text-align:center}
+.card-value.gain{color:var(--gain)}.card-value.loss{color:var(--loss)}.card-value.blue{color:var(--pri)}
+.card-value.compact{
+  font-size:clamp(.72rem,1.5vw,.9rem);max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.tiny-note{font-size:.62rem;color:var(--mut);font-weight:600}
+@media (max-width:480px){
+  .card{padding:10px 8px;border-radius:14px}
+  .card-head{font-size:.66rem}
+  .card-value{font-size:.94rem}
+  .card-value.compact{font-size:.8rem}
+}
+
+/* ===== Performance Charts Styling ===== */
+.chart-switcher{
+  display:flex;gap:10px;justify-content:center;margin:10px 0 18px;
+}
+.chart-switcher .chart-tab{
+  padding:8px 16px;border-radius:8px;border:1px solid rgba(0,89,255,.25);
+  background:#fff;color:var(--pri);font-weight:700;cursor:pointer;
+  transition:.25s;font-size:.8rem;text-transform:uppercase;
+}
+.chart-switcher .chart-tab.active{
+  background:linear-gradient(135deg,var(--pri),var(--acc));
+  color:#fff;border:1px solid transparent;box-shadow:0 4px 10px rgba(0,89,255,.15);
+}
+.chart-switcher .chart-tab:hover{transform:translateY(-2px)}
+
+.chart-wrapper{
+  width:100%;background:var(--card);border-radius:16px;padding:20px;
+  box-shadow:var(--shadow);border:1px solid var(--outer);margin-bottom:20px;
+}
+.chart-canvas{width:100%;height:360px}
+@media (max-width:480px){.chart-canvas{height:260px}}
+
+/* ===== Table ===== */
+.table-container{background:var(--card);border-radius:16px;overflow-x:auto;box-shadow:var(--shadow);border:1px solid var(--outer)}
+.wli-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.75rem;min-width:980px;border:none}
+.wli-table th{
+  background:#003366;color:#fff;font-weight:700;padding:8px 6px;text-align:center;
+  white-space:nowrap;position:relative;border-bottom:0;
+}
+.wli-table td{padding:7px 8px;text-align:center;border-bottom:0;vertical-align:middle}
+.wli-table td+td,.wli-table th+th{border-left:1px solid var(--vline)}
+.wli-table tr:nth-child(even){background:#f6fbff}
+.wli-table tr:nth-child(odd){background:#fff}
+.wli-table td:nth-child(2){
+  position:sticky;left:0;z-index:3;text-align:left;font-weight:700;color:var(--pri);
+  min-width:160px;max-width:240px;white-space:normal;word-wrap:break-word;
+  background:#fff;box-shadow:4px 0 0 var(--vline);
+}
+.wli-table tr:nth-child(even) td:nth-child(2){background:#f6fbff}
+.wli-table tr:hover{background:rgba(0,89,255,.07);transition:background .15s}
+.wli-table th.sortable{cursor:pointer;user-select:none}
+.sort-ind{margin-left:6px;font-size:.7rem;opacity:.9}
+.price-cell{text-align:right!important;padding-right:14px!important}
+th.price,td.price-cell{min-width:120px}
+th.percent,td.percent-cell{min-width:110px}
+th.narrow,td.narrow{min-width:80px;white-space:normal;line-height:1.15}
+.wli-table th.narrow{white-space:normal}
+.heatmap{border-radius:12px;padding:3px 8px;display:inline-block;font-weight:800}
+.monthly-deep.gain{color:#0b7f5a;font-weight:900}
+.monthly-deep.loss{color:#c41435;font-weight:900}
+.wli-table .percent-cell.gain,.wli-table td.gain{color:var(--gain);font-weight:800}
+.wli-table .percent-cell.loss,.wli-table td.loss{color:var(--loss);font-weight:800}
+.wli-table .percent-cell.blue,.wli-table td.blue{color:var(--pri);font-weight:800}
+@media (max-width:900px){.wli-table{font-size:.7rem}}
+@media (max-width:480px){.wli-table{font-size:.66rem}}
+
+/* ===== Footer ===== */
+.footer-refresh{display:flex;justify-content:center;align-items:center;font-size:.68rem;color:var(--mut);margin-top:10px;gap:10px}
+.footer-btn{
+  background:linear-gradient(135deg,var(--pri),var(--acc));
+  border:none;color:#fff;font-weight:700;border-radius:8px;
+  padding:6px 10px;cursor:pointer;font-size:.72rem;transition:transform .2s;
+}
+.footer-btn:hover{transform:scale(1.05)}
+
+.loader{text-align:center;font-size:.8rem;color:var(--mut);padding:8px 0}
+</style>
+
+<!-- ===== Header ===== -->
+<div class="header-row">
+  <div id="wli-title" class="header-title">Portfolio Dashboard</div>
+  <div class="incorporation-info">
+    New Portfolio Incorporation Date:<strong>17th February 2025</strong>
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="nav-tabs" id="wliTabs" role="tablist" aria-label="Dashboard Sections">
+  <button class="active" role="tab" aria-selected="true" data-tab="portfolio">Portfolio</button>
+  <button role="tab" aria-selected="false" data-tab="performance">Performance</button>
+  <button role="tab" aria-selected="false" data-tab="viewzone">View Zone</button>
+  <button role="tab" aria-selected="false" data-tab="transaction">Transaction</button>
+  <button role="tab" aria-selected="false" data-tab="allocation">Allocation</button>
+</div>
+
+<!-- ===== Cards ===== -->
+<div id="dataPanel" class="data-panel">
+  <div class="loader">📊 Loading live data...</div>
+</div>
+
+<!-- ===== Performance Charts (Performance Tab Only) ===== -->
+<div id="performanceCharts" style="display:none;margin:20px 0;">
+  <div id="chartSwitcher" class="chart-switcher">
+    <button data-chart="equity" class="chart-tab active">Equity Curve</button>
+    <button data-chart="monthly" class="chart-tab">Monthly Returns</button>
+    <button data-chart="benchmark" class="chart-tab">Cumulative vs Nifty-50</button>
+  </div>
+
+  <div class="chart-wrapper" id="equityWrapper">
+    <canvas id="equityChart" class="chart-canvas"></canvas>
+  </div>
+
+  <div class="chart-wrapper" id="monthlyWrapper" style="display:none;">
+    <canvas id="monthlyChart" class="chart-canvas"></canvas>
+  </div>
+
+  <div class="chart-wrapper" id="benchmarkWrapper" style="display:none;">
+    <canvas id="benchmarkChart" class="chart-canvas"></canvas>
+  </div>
+</div>
+
+<!-- ===== Table ===== -->
+<div class="table-container">
+  <table id="portfolioTable" class="wli-table" aria-describedby="wli-title">
+    <thead>
+      <tr>
+        <th scope="col" data-key="SL No.">SL No.</th>
+        <th scope="col" data-key="Name of the Stock">Name of the Stock <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="percent" data-key="Day Change">Day Change <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="percent" data-key="Monthly Gain / Loss">Monthly Gain / Loss <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="price" data-key="Bought Price">Bought Price <span class="sort-ind">⇅</span></th>
+        <th scope="col" data-key="Bought on">Bought on <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="price" data-key="CMP">CMP <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="percent" data-key="Generated Returns">Generated Returns <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="percent narrow" data-key="Distance from 52W High">Distance from 52W High <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="narrow" data-key="Weightage Each stock">Weightage Each stock <span class="sort-ind">⇅</span></th>
+        <th scope="col" class="narrow" data-key="Holding Period">Holding Period <span class="sort-ind">⇅</span></th>
+      </tr>
+    </thead>
+    <tbody><tr><td colspan="11">📥 Loading data...</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ===== Footer ===== -->
+<div class="footer-refresh">
+  <div id="wliUpdated" aria-live="polite">🔄 Last Refresh: Loading...</div>
+  <button id="refreshData" class="footer-btn" type="button">↻ Refresh</button>
+</div>
+
+<script>
+(async()=>{
+
+  /* ========= Sheet URLs =========
+     ⚠️ Public sheets are visible to anyone with URL.
+  */
+  const sheets = {
+    portfolio: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNefv7bdkZ2F96vp9kr3ROTISnfU_ZzcP8ZmvwMqDOPPjR3vQcs0INpk_4bnLZtJjavGYxP07MEM2j/pub?gid=5907987&single=true&output=csv"
+  };
+  const cardSheet =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNefv7bdkZ2F96vp9kr3ROTISnfU_ZzcP8ZmvwMqDOPPjR3vQcs0INpk_4bnLZtJjavGYxP07MEM2j/pub?gid=1276450745&single=true&output=csv";
+  const performanceSheet =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNefv7bdkZ2F96vp9kr3ROTISnfU_ZzcP8ZmvwMqDOPPjR3vQcs0INpk_4bnLZtJjavGYxP07MEM2j/pub?gid=1851618778&single=true&output=csv";
+
+  const panel = document.getElementById("dataPanel");
+  const table = document.getElementById("portfolioTable");
+  const body  = table.querySelector("tbody");
+  const updated = document.getElementById("wliUpdated");
+  const refreshBtn = document.getElementById("refreshData");
+  const tabs = [...document.querySelectorAll("#wliTabs [role='tab']")];
+  const chartsWrap = document.getElementById("performanceCharts");
+  const tableWrap = document.querySelector(".table-container");
+
+  let currentTab="portfolio";
+  let rows=[];
+  let sortState={key:"Day Change",dir:"desc"};
+
+  // Performance / charts state
+  let perfData=null;
+  let equityChart=null, monthlyChart=null, benchmarkChart=null;
+  let chartSwitcherWired=false;
+
+  /* ========= Utils ========= */
+  async function csv(u){
+    if(!u) return [];
+    const url = u + (u.includes("?") ? "&" : "?") + "t=" + Date.now();
+    const t = await (await fetch(url,{cache:"no-store"})).text();
+    return t.split(/\r?\n/).filter(x=>x.trim())
+            .map(r=>r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x=>x.replace(/^"|"$/g,'')));
+  }
+  const pct = s => { if(s==null) return NaN; const n=parseFloat(String(s).replace(/[^\d.\-]/g,'')); return isNaN(n)?NaN:n; };
+  const num = s => { if(s==null) return NaN; const n=parseFloat(String(s).replace(/,/g,'')); return isNaN(n)?NaN:n; };
+  const dmy = s => { const m=String(s||'').match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/); if(!m) return NaN;
+    const y=m[3].length===2?+('20'+m[3]):+m[3]; return new Date(y,(+m[2])-1,+m[1]).getTime(); };
+  const inr = n => { try{return '₹ '+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}catch{return '₹ '+n} };
+  const pct90Abs = arr => { const s=arr.map(v=>Math.abs(v)).filter(v=>!isNaN(v)).sort((a,b)=>a-b); if(!s.length) return 1; return Math.max(s[Math.floor(.9*(s.length-1))]||1,1e-6); };
+  const heat = (v,S)=>{ if(isNaN(v)||S<=0) return {bg:'transparent',fg:'inherit'}; const a=Math.min(Math.abs(v)/S,1),h=v>=0?145:2,light=96-(a*56); return {bg:`hsl(${h} 90% ${light}%)`,fg:a>.55?'#fff':(v>=0?'#065f46':'#7f1d1d')} };
+  const idx=(hdr,alts)=>alts.reduce((p,a)=>p>-1?p:hdr.findIndex(h=>(h||'').trim().toLowerCase()===a.toLowerCase()),-1);
+  const abbr = n => { const s=String(n||'').replace(/<[^>]*>/g,'').trim(); if(!s) return ''; const p=s.split(/\s+/).filter(w=>w.length>2); return (p.slice(0,3).map(w=>w[0]).join('')||s.slice(0,10)).toUpperCase(); };
+
+  /* ========= Portfolio data prep ========= */
+  function prep(mat){
+    if(!mat.length) return [];
+    const h=mat[0];
+    const I={
+      name:idx(h,["Name of the Stock"]),
+      code:idx(h,["NSE Code","Symbol","Ticker","NSE Symbol","Stock Code"]),
+      day: idx(h,["Day Change"]),
+      mon: idx(h,["Monthly Gain / Loss","Monthly Gain or Loss"]),
+      buyP:idx(h,["Bought Price"]),
+      buyOn:idx(h,["Bought on"]),
+      cmp: idx(h,["CMP"]),
+      ret: idx(h,["Generated Returns"]),
+      dist:idx(h,["Distance from 52W High","Distance from 52W high"]),
+      wt:  idx(h,["Weightage Each stock"]),
+      hold:idx(h,["Holding Period"])
+    };
+    return mat.slice(1)
+      .filter(r=>!r.some(c=>String(c||'').trim().toLowerCase()==='total'))
+      .map(r=>({raw:{
+          name:r[I.name],code:r[I.code],day:r[I.day],mon:r[I.mon],buyP:r[I.buyP],buyOn:r[I.buyOn],
+          cmp:r[I.cmp],ret:r[I.ret],dist:r[I.dist],wt:r[I.wt],hold:r[I.hold]},
+        sort:{
+          name:String(r[I.name]||'').toLowerCase(),day:pct(r[I.day]),mon:pct(r[I.mon]),buyP:num(r[I.buyP]),
+          buyOn:dmy(r[I.buyOn]),cmp:num(r[I.cmp]),ret:pct(r[I.ret]),dist:pct(r[I.dist]),wt:pct(r[I.wt]),
+          hold:parseInt(String(r[I.hold]||'').replace(/\D/g,''),10)||NaN
+        }}));
+  }
+
+  /* ========= Cards ========= */
+  function renderCards(cardCSV, data){
+    const base=(cardCSV.length?cardCSV.slice(1,7).map(r=>{
+      const label=r[0], val=r[1], ok=val && String(val).trim()!=='#N/A';
+      return {label,value: ok?val:`<span class="tiny-note">Data is Fetching...</span>`, cls: ok&&String(val).includes('-')?'loss':'gain',compact:false};
+    }):[]);
+    const d=[];
+    if(data.length){
+      const byRet=[...data].filter(x=>!isNaN(x.sort.ret)).sort((a,b)=>b.sort.ret-a.sort.ret);
+      const labelOf=x=>(x.raw.code&&String(x.raw.code).trim())||abbr(x.raw.name);
+      byRet.slice(0,3).forEach((x,i)=>d.push({label:`Top Performer #${i+1}`,value:`${labelOf(x)} – ${x.sort.ret.toFixed(2)}%`,cls:x.sort.ret>=0?'gain':'loss',compact:true}));
+      if(byRet.length) d.push({label:`Worst Performer`,value:`${labelOf(byRet[byRet.length-1])} – ${byRet[byRet.length-1].sort.ret.toFixed(2)}%`,cls:byRet[byRet.length-1].sort.ret>=0?'gain':'loss',compact:true});
+      const byMon=[...data].filter(x=>!isNaN(x.sort.mon)).sort((a,b)=>b.sort.mon-a.sort.mon);
+      if(byMon.length) d.push({label:`Top Performer on the Month`,value:`${labelOf(byMon[0])} – ${byMon[0].sort.mon.toFixed(2)}%`,cls:byMon[0].sort.mon>=0?'gain':'loss',compact:true});
+      const byDay=[...data].filter(x=>!isNaN(x.sort.day)).sort((a,b)=>b.sort.day-a.sort.day);
+      if(byDay.length) d.push({label:`Best Day Performer`,value:`${labelOf(byDay[0])} – ${byDay[0].sort.day.toFixed(2)}%`,cls:byDay[0].sort.day>=0?'gain':'loss',compact:true});
+    }
+    const all=base.concat(d).slice(0,12);
+    return `<div class="card-grid">${
+      all.map(c=>`<div class="card" role="group" aria-label="${c.label}">
+        <div class="card-head">${c.label}</div><div class="card-divider"></div>
+        <div class="card-value ${c.compact?'compact':''} ${c.cls}">${c.value}</div></div>`).join('')
+    }</div>`;
+  }
+
+  /* ========= Table ========= */
+  function rowHTML(o,i,scale){
+    const dn=String(o.raw.day||'').includes('-'), dayCls=dn?'loss':'gain',
+          day=o.raw.day?`${o.raw.day} <span class="arrow" aria-hidden="true" style="color:var(--${dn?'loss':'gain'})">${dn?'▼':'▲'}</span>`:`<span class="tiny-note">Data is Fetching...</span>`;
+    const mn=String(o.raw.mon||'').includes('-'),
+          mon=o.raw.mon?`<span class="monthly-deep ${mn?'loss':'gain'}">${o.raw.mon} <span class="arrow" aria-hidden="true" style="color:var(--${mn?'loss':'gain'})">${mn?'▼':'▲'}</span></span>`:`<span class="tiny-note">Data is Fetching...</span>`;
+    const bp=isNaN(o.sort.buyP)?`<span class="tiny-note">Data is Fetching...</span>`:inr(o.sort.buyP),
+          cmp=isNaN(o.sort.cmp)?`<span class="tiny-note">Data is Fetching...</span>`:inr(o.sort.cmp);
+    const hm=heat(o.sort.ret,scale),
+          ret=isNaN(o.sort.ret)?`<span class="tiny-note">Data is Fetching...</span>`:`<span class="heatmap" style="background:${hm.bg};color:${hm.fg}">${o.raw.ret}</span>`;
+    let distCls="",dist=o.raw.dist||`<span class="tiny-note">Data is Fetching...</span>`;
+    if(!isNaN(o.sort.dist)){ dist=o.raw.dist; distCls=o.sort.dist<=15?'gain':(o.sort.dist<=20?'blue':'loss'); }
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="text-align:left">${o.raw.name||`<span class="tiny-note">Data is Fetching...</span>`}</td>
+      <td class="percent-cell ${dayCls}" title="Day Change">${day}</td>
+      <td class="percent-cell" title="Monthly Gain / Loss">${mon}</td>
+      <td class="price-cell">${bp}</td>
+      <td>${o.raw.buyOn||`<span class="tiny-note">Data is Fetching...</span>`}</td>
+      <td class="price-cell">${cmp}</td>
+      <td class="percent-cell">${ret}</td>
+      <td class="percent-cell ${distCls}" title="Distance from 52W High">${dist}</td>
+      <td class="narrow">${o.raw.wt||`<span class="tiny-note">Data is Fetching...</span>`}</td>
+      <td class="narrow">${o.raw.hold||`<span class="tiny-note">Data is Fetching...</span>`}</td>
+    </tr>`;
+  }
+
+  function updateIndicators(){
+    table.querySelectorAll('thead th').forEach(th=>{
+      const k=th.dataset.key; if(!k||k==="SL No.") return;
+      th.classList.add('sortable'); th.tabIndex=0; th.setAttribute('role','columnheader');
+      const ind=th.querySelector('.sort-ind'); if(!ind) return;
+      if(k===sortState.key){
+        ind.textContent=sortState.dir==='asc'?'▲':'▼';
+        ind.style.opacity='1';
+        th.setAttribute('aria-sort',sortState.dir==='asc'?'ascending':'descending');
+      } else {
+        ind.textContent='⇅'; ind.style.opacity='.7'; th.setAttribute('aria-sort','none');
+      }
+    });
+  }
+
+  function sortApply(key){
+    const textKey=(key==="Name of the Stock"), def=textKey?'asc':'desc';
+    sortState = (sortState.key===key) ? {key,dir:(sortState.dir==='asc'?'desc':'asc')} : {key,dir:def};
+    const map={"Name of the Stock":"name","Day Change":"day","Monthly Gain / Loss":"mon","Bought Price":"buyP","Bought on":"buyOn","CMP":"cmp","Generated Returns":"ret","Distance from 52W High":"dist","Weightage Each stock":"wt","Holding Period":"hold"};
+    const f=map[key]||"name", numeric=(f!=="name");
+    rows.sort((a,b)=>{
+      let v1=a.sort[f],v2=b.sort[f];
+      if(!numeric){ v1=v1||''; v2=v2||''; const c=v1.localeCompare(v2); return sortState.dir==='asc'?c:-c; }
+      v1=(v1!=null&&!isNaN(v1))?v1:-Infinity; v2=(v2!=null&&!isNaN(v2))?v2:-Infinity;
+      const c=v1-v2; return sortState.dir==='asc'?c:-c;
+    });
+    updateIndicators(); renderTable();
+  }
+
+  function renderTable(){
+    if(!rows.length){ body.innerHTML=`<tr><td colspan="11">⚠️ No data found</td></tr>`; return; }
+    const S=pct90Abs(rows.map(x=>x.sort.ret));
+    body.innerHTML=rows.map((r,i)=>rowHTML(r,i,S)).join('');
+  }
+
+  function wireHeaders(){
+    table.querySelectorAll('thead th').forEach(th=>{
+      const k=th.dataset.key; if(!k||k==="SL No.") return;
+      th.addEventListener('click',()=>sortApply(k));
+      th.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sortApply(k);} });
+    });
+  }
+
+  /* ========= Performance data (Summary sheet) ========= */
+  async function loadPerformanceData(){
+    if(perfData) return perfData;
+    const mat = await csv(performanceSheet);
+    if(!mat.length) return null;
+
+    const h = mat[0].map(c=>c.trim().toLowerCase());
+    const iMonth       = h.indexOf("months");
+    const iMonPort     = h.indexOf("monthly returns");
+    const iMonNifty    = h.indexOf("nifty-50 monthly returns");
+    const iCumPort     = h.indexOf("portfolio returns");
+    const iCumNifty    = h.indexOf("nifty-50 returns");
+    const iNavPort     = h.indexOf("portfolio");
+    const iNavNifty    = h.indexOf("nifty-50");
+
+    if(iMonth<0) return null;
+
+    const rows = mat.slice(1).filter(r=>r[iMonth] && r[iMonth].trim()!=="");
+    const labels=[], monthlyPort=[], monthlyNifty=[], cumPort=[], cumNifty=[], navPort=[], navNifty=[];
+    rows.forEach(r=>{
+      labels.push(r[iMonth]);
+      monthlyPort.push(iMonPort>-1 ? pct(r[iMonPort]) : NaN);
+      monthlyNifty.push(iMonNifty>-1 ? pct(r[iMonNifty]) : NaN);
+      cumPort.push(iCumPort>-1 ? pct(r[iCumPort]) : NaN);
+      cumNifty.push(iCumNifty>-1 ? pct(r[iCumNifty]) : NaN);
+      navPort.push(iNavPort>-1 ? num(r[iNavPort]) : NaN);
+      navNifty.push(iNavNifty>-1 ? num(r[iNavNifty]) : NaN);
+    });
+
+    perfData = {labels,monthlyPort,monthlyNifty,cumPort,cumNifty,navPort,navNifty};
+    return perfData;
+  }
+
+  async function ensureChartJs(){
+    if(window.Chart) return;
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src="https://cdn.jsdelivr.net/npm/chart.js";
+      s.onload=()=>res();
+      s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+  function destroyChart(ch){ if(ch && typeof ch.destroy==="function") ch.destroy(); }
+
+  function showChart(type){
+    document.getElementById("equityWrapper").style.display = (type==="equity")?"block":"none";
+    document.getElementById("monthlyWrapper").style.display = (type==="monthly")?"block":"none";
+    document.getElementById("benchmarkWrapper").style.display = (type==="benchmark")?"block":"none";
+  }
+
+  /* ---- Equity Curve (NAV / rebased) ---- */
+  function renderEquityChart(d){
+    const ctx=document.getElementById("equityChart").getContext("2d");
+    destroyChart(equityChart);
+
+    const hasNavPort = d.navPort && d.navPort.some(v=>!isNaN(v));
+    const hasNavNifty = d.navNifty && d.navNifty.some(v=>!isNaN(v));
+
+    let portCurve=[], niftyCurve=[];
+
+    if(hasNavPort && hasNavNifty){
+      portCurve = d.navPort;
+      niftyCurve = d.navNifty;
+    }else{
+      let p=100,b=100;
+      portCurve = d.monthlyPort.map(v=>{p*=1+(v||0)/100;return +p.toFixed(2);});
+      niftyCurve = d.monthlyNifty.map(v=>{b*=1+(v||0)/100;return +b.toFixed(2);});
+    }
+
+    equityChart=new Chart(ctx,{
+      type:"line",
+      data:{labels:d.labels,datasets:[
+        {label:"Portfolio NAV",data:portCurve,borderColor:"#0059ff",backgroundColor:"rgba(0,89,255,.12)",borderWidth:3,fill:true,tension:.25},
+        {label:"Nifty-50 (Rebased)",data:niftyCurve,borderColor:"#ff4d4d",backgroundColor:"rgba(255,77,77,.10)",borderWidth:3,fill:true,tension:.25}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:"top"},tooltip:{mode:"index",intersect:false}},
+        scales:{y:{ticks:{color:"#0f172a"}},x:{ticks:{color:"#6b7280"}}}
+      }
+    });
+  }
+
+  /* ---- Monthly Returns (Portfolio vs Nifty-50) ---- */
+  function renderMonthlyChart(d){
+    const ctx=document.getElementById("monthlyChart").getContext("2d");
+    destroyChart(monthlyChart);
+
+    const portColors = d.monthlyPort.map(v=>v>=0?"rgba(0,201,139,.8)":"rgba(255,77,77,.8)");
+
+    monthlyChart=new Chart(ctx,{
+      type:"bar",
+      data:{labels:d.labels,datasets:[
+        {label:"Portfolio Monthly Returns (%)",data:d.monthlyPort,backgroundColor:portColors},
+        {label:"Nifty-50 Monthly Returns (%)",data:d.monthlyNifty,backgroundColor:"rgba(0,89,255,.55)"}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:"top"},tooltip:{mode:"index",intersect:false}},
+        scales:{y:{ticks:{color:"#0f172a"}},x:{ticks:{color:"#6b7280"}}}
+      }
+    });
+  }
+
+  /* ---- Cumulative Returns vs Nifty-50 ---- */
+  function renderBenchmarkChart(d){
+    const ctx=document.getElementById("benchmarkChart").getContext("2d");
+    destroyChart(benchmarkChart);
+
+    const hasCum = d.cumPort && d.cumPort.some(v=>!isNaN(v)) && d.cumNifty && d.cumNifty.some(v=>!isNaN(v));
+    let portLine=[], niftyLine=[];
+
+    if(hasCum){
+      portLine = d.cumPort;
+      niftyLine = d.cumNifty;
+    }else{
+      // Build cumulative % from monthly returns
+      let pIndex=100,bIndex=100;
+      d.monthlyPort.forEach(v=>{pIndex*=1+(v||0)/100;portLine.push(((pIndex-100)/100)*100);});
+      d.monthlyNifty.forEach(v=>{bIndex*=1+(v||0)/100;niftyLine.push(((bIndex-100)/100)*100);});
+    }
+
+    benchmarkChart=new Chart(ctx,{
+      type:"line",
+      data:{labels:d.labels,datasets:[
+        {label:"Portfolio Cumulative Returns (%)",data:portLine,borderColor:"#00c98b",borderWidth:2,tension:.3,fill:false},
+        {label:"Nifty-50 Cumulative Returns (%)",data:niftyLine,borderColor:"#0059ff",borderWidth:2,tension:.3,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:"top"},tooltip:{mode:"index",intersect:false}},
+        scales:{y:{ticks:{color:"#0f172a"}},x:{ticks:{color:"#6b7280"}}}
+      }
+    });
+  }
+
+  function wireChartSwitcher(){
+    if(chartSwitcherWired) return;
+    const btns=document.querySelectorAll(".chart-tab");
+    btns.forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        btns.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const t=btn.dataset.chart;
+        showChart(t);
+        if(!perfData) return;
+        if(t==="equity") renderEquityChart(perfData);
+        else if(t==="monthly") renderMonthlyChart(perfData);
+        else renderBenchmarkChart(perfData);
+      });
+    });
+    chartSwitcherWired=true;
+  }
+
+  async function renderPerformanceArea(){
+    if(currentTab!=="performance"){
+      chartsWrap.style.display="none";
+      tableWrap.style.display="block";
+      return;
+    }
+    tableWrap.style.display="none";
+    chartsWrap.style.display="block";
+    await ensureChartJs();
+    const data = await loadPerformanceData();
+    if(!data) return;
+    showChart("equity");
+    renderEquityChart(data);
+    wireChartSwitcher();
+  }
+
+  /* ========= Refresh (cards + table + performance) ========= */
+  async function refresh(){
+    try{
+      panel.innerHTML=`<div class="loader">📈 Updating data...</div>`;
+      const [cards,mat]=await Promise.all([csv(cardSheet), csv(sheets.portfolio)]);
+      rows = prep(mat);
+      panel.innerHTML=renderCards(cards,rows);
+      updateIndicators(); sortApply("Day Change");
+      updated.textContent="🔄 Last Refresh: "+new Date().toLocaleString('en-IN',{hour12:true,year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      if(!table.dataset.wired){ wireHeaders(); table.dataset.wired=1; }
+      await renderPerformanceArea();
+    }catch(e){
+      console.error(e);
+      panel.innerHTML=`<div class="error">❌ Failed to load cards</div>`;
+      body.innerHTML=`<tr><td colspan="11">❌ Failed to load table</td></tr>`;
+    }
+  }
+
+  /* ========= Tabs & controls ========= */
+  tabs.forEach(t=>{
+    t.addEventListener('click',()=>{
+      tabs.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
+      t.classList.add('active');t.setAttribute('aria-selected','true');
+      currentTab=t.dataset.tab;
+      refresh();
+    });
+    t.addEventListener('keydown',e=>{
+      const L=tabs.length,i=tabs.indexOf(t);
+      if(e.key==='ArrowRight') tabs[(i+1)%L].focus();
+      if(e.key==='ArrowLeft') tabs[(i-1+L)%L].focus();
+    });
+  });
+  refreshBtn.onclick=refresh;
+
+  await refresh();
+  setInterval(refresh,60000);
+
+})();
+</script>
+</div>
